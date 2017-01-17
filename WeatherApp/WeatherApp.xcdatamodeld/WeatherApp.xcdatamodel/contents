@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="11542" systemVersion="15F34" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
-    <entity name="WeatherDB" representedClassName="WeatherDB" syncable="YES" codeGenerationType="class">
+    <entity name="WeatherDB" representedClassName="WeatherDB" syncable="YES">
         <attribute name="desc" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="humadity" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="imageIcon" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="temp" optional="YES" attributeType="String" syncable="YES"/>
     </entity>
     <elements>
-        <element name="WeatherDB" positionX="-63" positionY="-18" width="128" height="103"/>
+        <element name="WeatherDB" positionX="-2133" positionY="-3303" width="128" height="103"/>
     </elements>
 </model>

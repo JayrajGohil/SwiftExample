@@ -13,7 +13,7 @@ class MasterViewController: UITableViewController, WeatherTableCellDelegate {
 
     var result = RootClass()
     var cachedImages = [String: UIImage]()
-    var arrayWeather = [AnyObject]()
+    var arrayWeather = [WeatherDB]()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -31,74 +31,71 @@ class MasterViewController: UITableViewController, WeatherTableCellDelegate {
             }
             else {
                 self.result = rootClass
-                self.storeWeatherData()
-                self.fetchAllWeatherFromDatabase()
+                
+                DispatchQueue.main.async {
+                    self.storeWeatherData()
+                    self.fetchAllWeatherFromDatabase()
+                    self.tableView.reloadData()
+                }
+                
             }
         })
     }
 
     
     func storeWeatherData () {
-        let context =  AppDelegate.getContext()
         
-        //retrieve the entity that we just created
-        let entity =  NSEntityDescription.entity(forEntityName: "WeatherDB", in: context)
-        
-        let transc = NSManagedObject(entity: entity!, insertInto: context)
-        
-        for objList in self.result.list {
-            
-            //set the entity values
-            transc.setValue("\(objList.humidity!)", forKey: "humadity")
-            transc.setValue("\(objList.temp.day!)", forKey: "temp")
-            transc.setValue("\(objList.weather[0].icon!)", forKey: "imageIcon")
-            transc.setValue("\(objList.weather[0].descriptionField!)", forKey: "desc")
-            
-            //save the object
-            do {
-                try context.save()
-                print("saved!")
-            } catch let error as NSError  {
-                print("Could not save \(error), \(error.userInfo)")
-            } catch {
-                
+        for listObj in self.result.list as [List] {
+         
+            let weather : WeatherDB = WeatherDB(context: DatabaseManager.getContext())
+
+            if listObj.weather[0].descriptionField != nil {
+                weather.desc = listObj.weather[0].descriptionField!
             }
+            else {
+                weather.desc = "No Data"
+            }
+            
+            if listObj.temp.day != nil {
+                weather.temp = "\(listObj.temp.day!)"
+            }
+            else {
+                weather.temp = "No Data"
+            }
+            
+            if listObj.humidity != nil {
+                weather.humadity = "\(listObj.humidity!)"
+            }
+            else {
+                weather.humadity = "No Data"
+            }
+            
+            if listObj.weather[0].icon != nil {
+                weather.imageIcon = "http://openweathermap.org/img/w/\(listObj.weather[0].icon!).png"
+            }
+            else {
+                weather.imageIcon = ""
+            }
+            
+            DatabaseManager.saveContext()
         }
     }
-    
+
     func fetchAllWeatherFromDatabase()
     {
+        // Create fetch request for WeatherDB Entity
+        let fetchRequest  : NSFetchRequest <WeatherDB> = WeatherDB.fetchRequest()
         
-        
-        let context =  AppDelegate.getContext()
-        
-        // Initialize Fetch Request
-        let fetchRequest = NSFetchRequest<NSFetchRequestResult>()
-        
-        // Create Entity Description
-        let entityDescription = NSEntityDescription.entity(forEntityName: "WeatherDB", in: context)
-        
-        // Configure Fetch Request
-        fetchRequest.entity = entityDescription
-        
-        do {
-            let result = try context.fetch(fetchRequest)
+        do{
+            // Execute fetch request
+            let searchResults = try DatabaseManager.getContext().fetch(fetchRequest)
             
-            if (result.count > 0) {
-                let person = result[0] as! NSManagedObject
-                
-                print("1 - \(person)")
-                
-                if let first = person.value(forKey: "temp"), let last = person.value(forKey: "humadity") {
-                    print("\(first) \(last)")
-                }
-                
-                print("2 - \(person)")
-            }
-            
-        } catch {
-            let fetchError = error as NSError
-            print(fetchError)
+            // Update WeatherDB array with new result
+            self.arrayWeather = searchResults
+        }
+        catch{
+            // Handle Error
+            print("Error:\(error)")
         }
     }
     
@@ -131,28 +128,25 @@ class MasterViewController: UITableViewController, WeatherTableCellDelegate {
         cell.delegate=self
         cell.tag = indexPath.row
         
-        // Configure the cell...
-        let listObject = result.list[indexPath.row]
-        if listObject.temp.day != nil {
-            cell.lblTemp.text = "Temp: \(listObject.temp.day!)"
+        // Configure the cell...        
+        let listObject: WeatherDB = self.arrayWeather[indexPath.row]
+        if  listObject.temp != nil {
+            cell.lblTemp.text = "Temp: \(listObject.temp!)"
         }
-        
-        if listObject.humidity != nil {
-            cell.lblHumadity.text = "Humidity: \(listObject.humidity!)"
+        if listObject.humadity != nil {
+            cell.lblHumadity.text = "Humidity: \(listObject.humadity!)"
         }
-        
-        if listObject.weather[0].descriptionField != nil {
-            cell.lblDescription.text = "Description: \(listObject.weather[0].descriptionField!)"
+        if listObject.desc != nil {
+            cell.lblDescription.text = "Description: \(listObject.desc!)"
         }
-        
-        if listObject.weather[0].icon != nil {
-            let imageURL = listObject.weather[0].icon
+        if listObject.imageIcon != nil {
+            let imageURL = listObject.imageIcon
             if let image = cachedImages[imageURL!] {
                 cell.btnIcon.setImage(image, for: .normal)
             }
             else {
-                let strUrl = "http://openweathermap.org/img/w/\(listObject.weather[0].icon!).png".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
-                let url:URL = URL(string: strUrl)!
+                let strUrl = listObject.imageIcon?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+                let url:URL = URL(string: strUrl!)!
                 ServiceFactory.downloadImage(url: url, callBack: { (responseImage) in
                     if let image = responseImage {
                         let img = image.rounded
@@ -163,7 +157,6 @@ class MasterViewController: UITableViewController, WeatherTableCellDelegate {
                 
             }
         }
-        
         return cell
     }
     
